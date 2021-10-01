@@ -1,4 +1,5 @@
 # Prometheus + Grafana
+- Free port: 8080,9090,9093,9091,9091
 
 ### Install 
 ```
