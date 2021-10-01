@@ -47,11 +47,11 @@ sudo systemctl daemon-reload
 sudo systemctl start node_exporter
 sudo systemctl enable node_exporter
 
-#systemctl status node_exporter.service
-
+systemctl status node_exporter.service | grep running 
+sleep 2s
 echo ""
 echo ""
-echo "done !! http://ip_host:9100"
+echo "Done !! http://ip_host:9100 "
 echo ""
 echo ""
 sleep 2s
