@@ -7,12 +7,12 @@ route:
 receivers:
 - name: 'email-notifications'
   email_configs:
-  - to: trung.nguyen@hbc.com.vn
-    from: ithbc2020@gmail.com
+  - to: received_email
+    from: sent_email
     smarthost: smtp.gmail.com:587
-    auth_username: ithbc2020@gmail.com
-    auth_identity: ithbc2020@gmail.com
-    auth_password: kxomxbcexdxrakgz
+    auth_username: sent_email
+    auth_identity: sent_email
+    auth_password: pass_sent_email_app
     send_resolved: true
 inhibit_rules:
   - source_match:
