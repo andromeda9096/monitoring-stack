@@ -56,4 +56,3 @@ echo ""
 echo ""
 sleep 2s
 
-exit
