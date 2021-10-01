@@ -1,0 +1,22 @@
+global:
+ resolve_timeout: 1m
+
+route:
+ receiver: 'email-notifications'
+
+receivers:
+- name: 'email-notifications'
+  email_configs:
+  - to: trung.nguyen@hbc.com.vn
+    from: ithbc2020@gmail.com
+    smarthost: smtp.gmail.com:587
+    auth_username: ithbc2020@gmail.com
+    auth_identity: ithbc2020@gmail.com
+    auth_password: kxomxbcexdxrakgz
+    send_resolved: true
+inhibit_rules:
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname', 'dev', 'instance']
