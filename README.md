@@ -27,12 +27,17 @@ grafana: ip_host:3000
 curl -sSL https://raw.githubusercontent.com/andromeda9096/prometheus/main/node-exporter/docker-compose.yaml > docker-compose.yml
 docker-compose up -d 
 ```
+
 - Linux64:
 
 ```
 curl -sSL https://raw.githubusercontent.com/andromeda9096/prometheus/main/node-exporter/node-exporter.sh > node-exporter.sh && \
 chmod +x node-exporter.sh && ./node-exporter.sh 
 ```
+
+- Window: https://github.com/prometheus-community/windows_exporter , open wwindow firewall port :9182
+
+
 
 
 
