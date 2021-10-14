@@ -1,25 +1,7 @@
-# Prometheus + Grafana
-- Free port: 8080,9090,9093,9091,9091
 
-### 1/ Install Stack
-```
-git clone https://github.com/andromeda9096/prometheus.git
-cd ./prometheus
-docker-compose up -d 
-```
-#### Stack
-- Prometheus
-- Grafana
-- Node-exporter
-- Cadvisor
-
-### 2/Login Web UI
-
-prometheus: ip_host:9090
-
-grafana: ip_host:3000
-
-### 3/Install Node-exporter on target
+### instruction
+https://sysad.tech/vi/monitoring
+### Install Node-exporter on target
 
 - docker-compose for Node-exporter and Cadviser
 
