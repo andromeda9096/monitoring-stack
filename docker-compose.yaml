@@ -3,17 +3,21 @@ version: '3.7'
 volumes:
     prometheus_data: {}
     grafana_data: {}
+    influxdb-volume: {}
 
 networks:
-  front-tier:
-  back-tier:
+  grafana-network:
+  prometheus-network:
+  zabbix-network:
+  influxdb-network:
 
 services:
-
+# Prometheus
   prometheus:
     image: prom/prometheus:latest
+    container_name: prometheus-server   
     volumes:
-      - ./config/:/etc/prometheus/
+      - ./prometheus/config/:/etc/prometheus/
       - prometheus_data:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
@@ -30,15 +34,12 @@ services:
       - cadvisor
       - pushgateway
     networks:
-      - back-tier
+      - prometheus-network
     restart: always
-#    deploy:
-#      placement:
-#        constraints:
-#          - node.hostname == ${HOSTNAME}
 
   node-exporter:
     image: prom/node-exporter
+    container_name: node-exporter
     volumes:
       - /proc:/host/proc:ro
       - /sys:/host/sys:ro
@@ -51,29 +52,27 @@ services:
     ports:
       - 9100:9100
     networks:
-      - back-tier
+      - prometheus-network
     restart: always
-#    deploy:
-#      mode: global
 
+# alert manager
   alertmanager:
     image: prom/alertmanager
+    container_name: alertmanager
     ports:
       - 9093:9093
     volumes:
       - ./alertmanager/:/etc/alertmanager/
     networks:
-      - back-tier
+      - prometheus-network
     restart: always
     command:
       - '--config.file=/etc/alertmanager/config.yml'
       - '--storage.path=/alertmanager'
-#    deploy:
-#      placement:
-#        constraints:
-#          - node.hostname == ${HOSTNAME}
+# Cadvisor
   cadvisor:
     image: google/cadvisor
+    container_name: Cadvisor
     volumes:
       - /:/rootfs:ro
       - /var/run:/var/run:rw
@@ -82,34 +81,160 @@ services:
     ports:
       - 8080:8080
     networks:
-      - back-tier
+      - prometheus-network
     restart: always
-#    deploy:
-#      mode: global
 
+# Grafana
   grafana:
     image: grafana/grafana
-#    user: "472"
+    container_name: Grafana
     depends_on:
       - prometheus
+      - zabbix-server
+      - influxdb
     ports:
       - 3000:3000
     volumes:
       - grafana_data:/var/lib/grafana
-      - ./grafana/provisioning/:/etc/grafana/provisioning/
-#    env_file:
-#      - ./grafana/config.monitoring
+#      - ./grafana_data/provisioning/:/etc/grafana/provisioning/
+    environment: 
+      GF_INSTALL_PLUGINS:  "alexanderzobnin-zabbix-app,\
+                            grafana-influxdb-08-datasource,\
+                            grafana-kairosdb-datasource,\
+                            grafana-piechart-panel,\
+                            grafana-simple-json-datasource,\
+                            grafana-worldmap-panel,\
+                            grafana-clock-panel"    
+#      GF_SECURITY_ADMIN_USER: $GF_SECURITY_ADMIN_USER
+#      GF_SECURITY_ADMIN_PASSWORD: $GF_SECURITY_ADMIN_PASSWORD
     networks:
-      - back-tier
-      - front-tier
+      - prometheus-network
+      - grafana-network
+      - zabbix-network 
+      - influxdb-network     
     restart: always
-
+# push gateway
   pushgateway:
     image: prom/pushgateway
+    container_name: pushgateway
     restart: always
     expose:
       - 9091
     ports:
       - "9091:9091"
     networks:
-      - back-tier
+      - prometheus-network
+
+####################################################
+# zabbix server
+  mysql:
+    container_name: mysql
+    image: mysql:5.7
+    networks:
+      - zabbix-network
+    ports:
+      - '3306:3306'
+    restart: always
+    volumes:
+      - './zabbix/mysql:/var/lib/data'
+    environment:
+      MYSQL_ROOT_PASSWORD: $MYSQL_PASS
+      MYSQL_DATABASE: $MYSQL_DB
+      MYSQL_USER: $MYSQL_USER
+      MYSQL_PASSWORD: $MYSQL_PASS
+
+  zabbix-server:
+    container_name: zabbix-server
+    image: zabbix/zabbix-server-mysql:ubuntu-5.4-latest
+    networks:
+      - zabbix-network
+    links:
+      - mysql
+    restart: always
+    ports:
+      - '10051:10051'
+    volumes:
+      - './zabbix/alertscripts:/usr/lib/zabbix/alertscripts'
+    environment:
+      DB_SERVER_HOST: mysql
+      MYSQL_DATABASE: $MYSQL_DB
+      MYSQL_USER: $MYSQL_USER
+      MYSQL_PASSWORD: $MYSQL_PASS
+    depends_on:
+      - mysql
+
+  zabbix-frontend:
+    container_name: zabbix-frontend
+    image: zabbix/zabbix-web-apache-mysql:ubuntu-5.4-latest
+    networks:
+      - zabbix-network
+    links:
+      - mysql
+    restart: always
+    ports:
+      - '8081:8080'
+      - '8443:8443'
+    environment:
+      DB_SERVER_HOST: mysql
+      MYSQL_DATABASE: $MYSQL_DB
+      MYSQL_USER: $MYSQL_USER
+      MYSQL_PASSWORD: $MYSQL_PASS
+    depends_on:
+      - mysql
+
+  zabbix-agent:
+    container_name: zabbix-agent
+    image: zabbix/zabbix-agent:latest
+    user: root
+    networks:
+      - zabbix-network
+    links:
+      - zabbix-server
+    restart: always
+    privileged: true
+    volumes:
+      - ./zabbix-agent/var/run:/var/run
+    ports:
+      - '10050:10050'
+    environment:
+      - ZBX_HOSTNAME=zabbix-server
+#### influxDB + telegraf ###############################
+  influxdb:
+    image: influxdb:1.8.10
+    container_name: influxdb
+    restart: always
+    hostname: influxdb
+    ports:
+      - 8086:8086
+      - 8089:8089/udp
+    networks:
+      - influxdb-network
+    volumes:
+      - influxdb-volume:/var/lib/influxdb
+    environment:
+      INFLUXDB_DB: $INFLUX_DB
+      INFLUXDB_USER: $INFLUXDB_USER
+      INFLUXDB_USER_PASSWORD: $INFLUXDB_USER_PASSWORD
+
+
+  telegraf:
+    image: telegraf:latest
+    container_name: telegraf
+    depends_on:
+      - influxdb
+    restart: always
+    networks:
+      - influxdb-network
+    ports:
+      - 8092:8092
+      - 8094:8094
+      - 8125:8125
+    environment:
+      - HOST_PROC=/host/proc
+      - HOST_SYS=/host/sys
+      - HOST_ETC=/host/etc
+    links:
+      - influxdb
+    tty: true
+    volumes:
+      - ./telegraf/telegraf.conf:/etc/telegraf/telegraf.conf

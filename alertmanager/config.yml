@@ -7,12 +7,12 @@ route:
 receivers:
 - name: 'email-notifications'
   email_configs:
-  - to: received_email
-    from: sent_email
+  - to: received_email #changeme
+    from: sent_email #changeme
     smarthost: smtp.gmail.com:587
-    auth_username: sent_email
-    auth_identity: sent_email
-    auth_password: pass_sent_email_app
+    auth_username: sent_email #changeme
+    auth_identity: sent_email #changeme
+    auth_password: pass_sent_email_app #changeme, not email password,use app_password
     send_resolved: true
 inhibit_rules:
   - source_match:

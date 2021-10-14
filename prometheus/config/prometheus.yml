@@ -1,0 +1,65 @@
+global:
+  scrape_interval:     15s # By default, scrape targets every 15 seconds.
+
+  # Attach these labels to any time series or alerts when communicating with
+  # external systems (federation, remote storage, Alertmanager).
+  # external_labels:
+  #  monitor: 'codelab-monitor'
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+           - 192.168.3.11:9093  # Change your ip server
+
+rule_files:
+  - alert.rules.yml
+  - alert.container.yml
+  - alert.winserver.yml
+
+
+# A scrape configuration containing exactly one endpoint to scrape:
+# Here it's Prometheus itself.
+scrape_configs:
+  # The job name is added as a label `job=<job_name>` to any timeseries scraped from this config.
+  - job_name: 'prometheus'
+    # Override the global default and scrape targets from this job every 5 seconds.
+    scrape_interval: 5s
+    static_configs:
+      - targets: ['localhost:9090']
+
+
+
+  # Job for cadvisor  - IP Docker host
+  - job_name: 'DOCKER-PROMETHEUS-SERVER'
+    static_configs:
+       - targets: ['192.168.3.11:8080']
+
+  - job_name: 'DOCKER-99'
+    static_configs:
+       - targets: ['192.168.3.99:9200']
+
+  # Job for node_exporter - server linux :9100, window:9182
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100' ]
+
+  - job_name: 'Pfsense'
+    static_configs:
+       - targets: ['192.168.3.16:9100']
+
+  - job_name: 'HOST-DOCKER-99'
+    static_configs:
+       - targets: ['192.168.3.99:9100']
+
+  - job_name: 'window server - confluence'
+    static_configs:
+       - targets: ['192.168.3.7:9182']
+
+  - job_name: 'window server - JIRA'
+    static_configs:
+       - targets: ['192.168.3.5:9182']
+
+  - job_name: 'SAP'
+    static_configs:
+       - targets: ['192.168.3.10:9182']
