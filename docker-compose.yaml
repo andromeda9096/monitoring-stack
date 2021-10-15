@@ -12,6 +12,37 @@ networks:
   influxdb-network:
 
 services:
+#----------GRAGANA DASHBOARD-------------------------------------------------
+  grafana:
+    image: grafana/grafana
+    container_name: Grafana
+    depends_on:
+      - prometheus
+      - zabbix-server
+      - influxdb
+    ports:
+      - 3000:3000
+    volumes:
+      - grafana_data:/var/lib/grafana
+#      - ./grafana_data/provisioning/:/etc/grafana/provisioning/
+    environment: 
+      GF_INSTALL_PLUGINS:  "alexanderzobnin-zabbix-app,\
+                            grafana-influxdb-08-datasource,\
+                            grafana-kairosdb-datasource,\
+                            grafana-piechart-panel,\
+                            grafana-simple-json-datasource,\
+                            grafana-worldmap-panel,\
+                            grafana-clock-panel"    
+#      GF_SECURITY_ADMIN_USER: $GF_SECURITY_ADMIN_USER
+#      GF_SECURITY_ADMIN_PASSWORD: $GF_SECURITY_ADMIN_PASSWORD
+    networks:
+      - prometheus-network
+      - grafana-network
+      - zabbix-network 
+      - influxdb-network     
+    restart: always
+
+#----------PROMETHEUS SERVICES------------------------------------------------- 
 # Prometheus
   prometheus:
     image: prom/prometheus:latest
@@ -69,6 +100,7 @@ services:
     command:
       - '--config.file=/etc/alertmanager/config.yml'
       - '--storage.path=/alertmanager'
+
 # Cadvisor
   cadvisor:
     image: google/cadvisor
@@ -84,35 +116,6 @@ services:
       - prometheus-network
     restart: always
 
-# Grafana
-  grafana:
-    image: grafana/grafana
-    container_name: Grafana
-    depends_on:
-      - prometheus
-      - zabbix-server
-      - influxdb
-    ports:
-      - 3000:3000
-    volumes:
-      - grafana_data:/var/lib/grafana
-#      - ./grafana_data/provisioning/:/etc/grafana/provisioning/
-    environment: 
-      GF_INSTALL_PLUGINS:  "alexanderzobnin-zabbix-app,\
-                            grafana-influxdb-08-datasource,\
-                            grafana-kairosdb-datasource,\
-                            grafana-piechart-panel,\
-                            grafana-simple-json-datasource,\
-                            grafana-worldmap-panel,\
-                            grafana-clock-panel"    
-#      GF_SECURITY_ADMIN_USER: $GF_SECURITY_ADMIN_USER
-#      GF_SECURITY_ADMIN_PASSWORD: $GF_SECURITY_ADMIN_PASSWORD
-    networks:
-      - prometheus-network
-      - grafana-network
-      - zabbix-network 
-      - influxdb-network     
-    restart: always
 # push gateway
   pushgateway:
     image: prom/pushgateway
@@ -125,8 +128,9 @@ services:
     networks:
       - prometheus-network
 
-####################################################
-# zabbix server
+
+#--------ZABBIX SERVICES--------------------------------------
+# mysql
   mysql:
     container_name: mysql
     image: mysql:5.7
@@ -143,6 +147,7 @@ services:
       MYSQL_USER: $MYSQL_USER
       MYSQL_PASSWORD: $MYSQL_PASS
 
+# zabbix-server
   zabbix-server:
     container_name: zabbix-server
     image: zabbix/zabbix-server-mysql:ubuntu-5.4-latest
@@ -163,6 +168,7 @@ services:
     depends_on:
       - mysql
 
+# zabbix-frontend
   zabbix-frontend:
     container_name: zabbix-frontend
     image: zabbix/zabbix-web-apache-mysql:ubuntu-5.4-latest
@@ -182,6 +188,7 @@ services:
     depends_on:
       - mysql
 
+# zabbix-agent
   zabbix-agent:
     container_name: zabbix-agent
     image: zabbix/zabbix-agent:latest
@@ -198,7 +205,9 @@ services:
       - '10050:10050'
     environment:
       - ZBX_HOSTNAME=zabbix-server
-#### influxDB + telegraf ###############################
+
+#--------INFLUXDB SERVICES--------------------------------------
+# influxDB
   influxdb:
     image: influxdb:1.8.10
     container_name: influxdb
@@ -217,24 +226,24 @@ services:
       INFLUXDB_USER_PASSWORD: $INFLUXDB_USER_PASSWORD
 
 
-  telegraf:
-    image: telegraf:latest
-    container_name: telegraf
-    depends_on:
-      - influxdb
-    restart: always
-    networks:
-      - influxdb-network
-    ports:
-      - 8092:8092
-      - 8094:8094
-      - 8125:8125
-    environment:
-      - HOST_PROC=/host/proc
-      - HOST_SYS=/host/sys
-      - HOST_ETC=/host/etc
-    links:
-      - influxdb
-    tty: true
-    volumes:
-      - ./telegraf/telegraf.conf:/etc/telegraf/telegraf.conf
+  # telegraf:
+  #   image: telegraf:latest
+  #   container_name: telegraf
+  #   depends_on:
+  #     - influxdb
+  #   restart: always
+  #   networks:
+  #     - influxdb-network
+  #   ports:
+  #     - 8092:8092
+  #     - 8094:8094
+  #     - 8125:8125
+  #   environment:
+  #     - HOST_PROC=/host/proc
+  #     - HOST_SYS=/host/sys
+  #     - HOST_ETC=/host/etc
+  #   links:
+  #     - influxdb
+  #   tty: true
+  #   volumes:
+  #     - ./telegraf/telegraf.conf:/etc/telegraf/telegraf.conf
