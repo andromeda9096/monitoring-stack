@@ -1,15 +1,16 @@
-version: '3.7'
-
-volumes:
-    prometheus_data: {}
-    grafana_data: {}
-    influxdb-volume: {}
+version: '3.5'
 
 networks:
+  zbx_net:
   grafana-network:
   prometheus-network:
-  zabbix-network:
-  influxdb-network:
+#  influxdb-network:
+
+volumes:
+    prometheus_data:
+    grafana_data:
+    influxdb-volume:
+
 
 services:
 #----------GRAGANA DASHBOARD-------------------------------------------------
@@ -18,8 +19,8 @@ services:
     container_name: Grafana
     depends_on:
       - prometheus
-      - zabbix-server
-      - influxdb
+      - zabbix-server-mysql
+#      - influxdb
     ports:
       - 3000:3000
     volumes:
@@ -38,8 +39,8 @@ services:
     networks:
       - prometheus-network
       - grafana-network
-      - zabbix-network 
-      - influxdb-network     
+      - zbx_net 
+#      - influxdb-network     
     restart: always
 
 #----------PROMETHEUS SERVICES------------------------------------------------- 
@@ -129,101 +130,24 @@ services:
       - prometheus-network
 
 
-#--------ZABBIX SERVICES--------------------------------------
-# mysql
-  mysql:
-    container_name: mysql
-    image: mysql:5.7
-    networks:
-      - zabbix-network
-    ports:
-      - '3306:3306'
-    restart: always
-    volumes:
-      - './zabbix/mysql:/var/lib/data'
-    environment:
-      MYSQL_ROOT_PASSWORD: $MYSQL_PASS
-      MYSQL_DATABASE: $MYSQL_DB
-      MYSQL_USER: $MYSQL_USER
-      MYSQL_PASSWORD: $MYSQL_PASS
-
-# zabbix-server
-  zabbix-server:
-    container_name: zabbix-server
-    image: zabbix/zabbix-server-mysql:ubuntu-5.4-latest
-    networks:
-      - zabbix-network
-    links:
-      - mysql
-    restart: always
-    ports:
-      - '10051:10051'
-    volumes:
-      - './zabbix/alertscripts:/usr/lib/zabbix/alertscripts'
-    environment:
-      DB_SERVER_HOST: mysql
-      MYSQL_DATABASE: $MYSQL_DB
-      MYSQL_USER: $MYSQL_USER
-      MYSQL_PASSWORD: $MYSQL_PASS
-    depends_on:
-      - mysql
-
-# zabbix-frontend
-  zabbix-frontend:
-    container_name: zabbix-frontend
-    image: zabbix/zabbix-web-apache-mysql:ubuntu-5.4-latest
-    networks:
-      - zabbix-network
-    links:
-      - mysql
-    restart: always
-    ports:
-      - '8081:8080'
-      - '8443:8443'
-    environment:
-      DB_SERVER_HOST: mysql
-      MYSQL_DATABASE: $MYSQL_DB
-      MYSQL_USER: $MYSQL_USER
-      MYSQL_PASSWORD: $MYSQL_PASS
-    depends_on:
-      - mysql
-
-# zabbix-agent
-  zabbix-agent:
-    container_name: zabbix-agent
-    image: zabbix/zabbix-agent:latest
-    user: root
-    networks:
-      - zabbix-network
-    links:
-      - zabbix-server
-    restart: always
-    privileged: true
-    volumes:
-      - ./zabbix-agent/var/run:/var/run
-    ports:
-      - '10050:10050'
-    environment:
-      - ZBX_HOSTNAME=zabbix-server
-
 #--------INFLUXDB SERVICES--------------------------------------
-# influxDB
-  influxdb:
-    image: influxdb:1.8.10
-    container_name: influxdb
-    restart: always
-    hostname: influxdb
-    ports:
-      - 8086:8086
-      - 8089:8089/udp
-    networks:
-      - influxdb-network
-    volumes:
-      - influxdb-volume:/var/lib/influxdb
-    environment:
-      INFLUXDB_DB: $INFLUX_DB
-      INFLUXDB_USER: $INFLUXDB_USER
-      INFLUXDB_USER_PASSWORD: $INFLUXDB_USER_PASSWORD
+# # influxDB
+#   influxdb:
+#     image: influxdb:1.8.10
+#     container_name: influxdb
+#     restart: always
+#     hostname: influxdb
+#     ports:
+#       - 8086:8086
+#       - 8089:8089/udp
+#     networks:
+#       - influxdb-network
+#     volumes:
+#       - influxdb-volume:/var/lib/influxdb
+#     environment:
+#       INFLUXDB_DB: $INFLUX_DB
+#       INFLUXDB_USER: $INFLUXDB_USER
+#       INFLUXDB_USER_PASSWORD: $INFLUXDB_USER_PASSWORD
 
 
   # telegraf:
@@ -247,3 +171,88 @@ services:
   #   tty: true
   #   volumes:
   #     - ./telegraf/telegraf.conf:/etc/telegraf/telegraf.conf
+
+
+
+ #--------mysql-server--------------------------------------
+  mysql-server:
+    image: mysql:8.0
+    networks:
+    - zbx_net
+    ports:
+      - '3306:3306'
+    command:
+    - mysqld
+    - --character-set-server=utf8
+    - --collation-server=utf8_bin
+    - --default-authentication-plugin=mysql_native_password
+    environment:
+    - MYSQL_USER=$MYSQL_USER
+    - MYSQL_DATABASE=$MYSQL_DB
+    - MYSQL_PASSWORD=$MYSQL_PASS
+    - MYSQL_ROOT_PASSWORD=$MYSQL_PASS
+    - ZBX_JAVAGATEWAY=zabbix-java-gateway
+    volumes:
+    - /zabbix-mysql:/var/lib/mysql:rw
+    security_opt:
+     - seccomp:unconfined
+ #--------zabbix-server-mysql--------------------------------------
+  zabbix-server-mysql:
+    image: zabbix/zabbix-server-mysql:alpine-latest
+    networks:
+    - zbx_net
+    ports:
+    - 10051:10051
+    volumes:
+    - /etc/localtime:/etc/localtime:ro
+    - /etc/timezone:/etc/timezone:ro 
+    - /zabbix-data/alertscripts:/usr/lib/zabbix/alertscripts:ro
+    - /zabbix-data/externalscripts:/usr/lib/zabbix/externalscripts:ro
+    - /zabbix-data/export:/var/lib/zabbix/export:rw
+    - /zabbix-data/modules:/var/lib/zabbix/modules:ro
+    - /zabbix-data/enc:/var/lib/zabbix/enc:ro
+    - /zabbix-data/ssh_keys:/var/lib/zabbix/ssh_keys:ro
+    - /zabbix-data/mibs:/var/lib/zabbix/mibs:ro
+    - /zabbix-data/snmptraps:/var/lib/zabbix/snmptraps:rw
+    environment:
+    - DB_SERVER_HOST=mysql-server
+    - MYSQL_USER=$MYSQL_USER
+    - MYSQL_DATABASE=$MYSQL_DB
+    - MYSQL_PASSWORD=$MYSQL_PASS
+    - MYSQL_ROOT_PASSWORD=$MYSQL_PASS
+    - ZBX_JAVAGATEWAY=zabbix-java-gateway
+
+    depends_on:
+    - mysql-server
+
+#--------zabbix-server-mysql--------------------------------------
+  zabbix-web-nginx-mysql:
+    image: zabbix/zabbix-web-nginx-mysql:alpine-6.0-latest
+    networks:
+    - zbx_net
+    ports:
+    - 8081:8080
+    - 8443:8443
+    volumes:
+    - /etc/localtime:/etc/localtime:ro
+    - /etc/timezone:/etc/timezone:ro
+    - /zabbix-nginx/nginx:/etc/ssl/nginx:ro
+    - /zabbix-nginx/modules/:/usr/share/zabbix/modules/:ro
+    environment:
+    - ZBX_SERVER_HOST=zabbix-server-mysql
+    - DB_SERVER_HOST=mysql-server
+    - MYSQL_USER=$MYSQL_USER
+    - MYSQL_DATABASE=$MYSQL_DB
+    - MYSQL_PASSWORD=$MYSQL_PASS
+    - MYSQL_ROOT_PASSWORD=$MYSQL_PASS
+    depends_on:
+    - mysql-server
+    - zabbix-server-mysql
+
+#--------zabbix-java-gateway--------------------------------------
+  zabbix-java-gateway:
+    image: zabbix/zabbix-java-gateway:alpine-6.0-latest
+    networks:
+    - zbx_net
+    ports:
+    - 10052:10052
