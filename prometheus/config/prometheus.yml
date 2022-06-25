@@ -31,9 +31,9 @@ scrape_configs:
 
 
   # Job for cadvisor  - IP Docker host
-  - job_name: 'DOCKER-PROMETHEUS-SERVER'
-    static_configs:
-       - targets: ['192.168.3.11:8080']
+  #- job_name: 'DOCKER-PROMETHEUS-SERVER'
+   # static_configs:
+    #   - targets: ['192.168.3.11:8080']
 
   - job_name: 'DOCKER-99'
     static_configs:
@@ -49,18 +49,18 @@ scrape_configs:
 
 
 
-  - job_name: 'pfsense'
+  - job_name: 'hbc-dev01'
     static_configs:
-       - targets: ['192.168.3.16:9100']
+      - targets: ['40.40.40.191:9100']
 
   - job_name: 'HOST-DOCKER-99'
     static_configs:
        - targets: ['192.168.3.99:9100']
 
-  - job_name: 'window server - confluence'
+  - job_name: 'window server - GAM-HBC'
     static_configs:
-       - targets: ['192.168.3.7:9182']
+       - targets: ['40.40.40.73:9182']
 
-  - job_name: 'window server - JIRA'
-    static_configs:
-       - targets: ['192.168.3.5:9182']
+  #- job_name: 'window server - JIRA'
+   # static_configs:
+    #   - targets: ['192.168.3.5:9182']
