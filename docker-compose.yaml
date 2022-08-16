@@ -131,7 +131,7 @@ services:
 
  #--------mysql-server--------------------------------------
   mysql-server:
-    image: mysql:8.0
+    image: mysql:8.0.30
     container_name: mysql-server
     networks:
     - zbx_net
@@ -155,7 +155,7 @@ services:
     restart: always
  #--------zabbix-server-mysql--------------------------------------
   zabbix-server-mysql:
-    image: zabbix/zabbix-server-mysql:alpine-latest
+    image: zabbix/zabbix-server-mysql:ubuntu-6.2-latest
     container_name: zabbix-server
     networks:
     - zbx_net
@@ -185,7 +185,7 @@ services:
     restart: always
 #--------zabbix-web-nginx--------------------------------------
   zabbix-web-nginx-mysql:
-    image: zabbix/zabbix-web-nginx-mysql:alpine-6.0-latest
+    image: zabbix/zabbix-web-nginx-mysql:6.2-alpine-latest
     container_name: zabbix-web-nginx
     networks:
     - zbx_net
